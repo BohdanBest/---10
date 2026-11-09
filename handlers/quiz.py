@@ -1,13 +1,3 @@
-"""Модуль обробників (хендлерів) для Telegram-бота тестування.
-
-Реалізує:
-- Старт тестування через команду /start
-- Рандомізацію 10 питань та 4 варіантів відповідей
-- Миттєву перевірку відповіді з поясненням
-- Фіксацію часу початку, завершення та дати тестування
-- Формування детального фінального звіту з результатами
-"""
-
 import html
 import random
 import time
@@ -28,7 +18,6 @@ router = Router(name="quiz_router")
 
 
 def get_current_kyiv_time() -> datetime:
-    """Повертає поточний час (за Києвом або системний локальний)."""
     try:
         return datetime.now(ZoneInfo("Europe/Kyiv"))
     except Exception:
@@ -36,17 +25,11 @@ def get_current_kyiv_time() -> datetime:
 
 
 def prepare_quiz_session() -> List[Dict[str, Any]]:
-    """Обирає 10 випадкових питань та перемішує варіанти відповідей для кожного.
-
-    Returns:
-        Список підготовлених запитань з перемішаними варіантами.
-    """
     total_to_take = min(10, len(QUESTIONS_POOL))
     chosen_raw = random.sample(QUESTIONS_POOL, total_to_take)
 
     prepared: List[Dict[str, Any]] = []
     for item in chosen_raw:
-        # Створюємо копію варіантів та перемішуємо їх
         shuffled_options = list(item["options"])
         random.shuffle(shuffled_options)
 
@@ -61,13 +44,11 @@ def prepare_quiz_session() -> List[Dict[str, Any]]:
 
 
 async def send_question(message: Message, state: FSMContext) -> None:
-    """Надсилає поточне питання користувачу."""
     data = await state.get_data()
     q_index: int = data.get("current_index", 0)
     questions: List[Dict[str, Any]] = data.get("questions", [])
 
     if q_index >= len(questions):
-        # Якщо питання вичерпано — завершуємо тест
         await finish_quiz(message, state)
         return
 
@@ -85,13 +66,11 @@ async def send_question(message: Message, state: FSMContext) -> None:
 
 @router.message(CommandStart())
 async def handle_start(message: Message, state: FSMContext) -> None:
-    """Обробник команди /start. Ініціалізує нову сесію тестування."""
     await start_new_quiz(message, state)
 
 
 @router.message(Command("help"))
 async def handle_help(message: Message) -> None:
-    """Обробник команди /help."""
     help_text = (
         "🤖 <b>Бот-тестувальник знань з Python та ООП</b>\n\n"
         "• Для початку або перезапуску тесту надішліть команду /start\n"
@@ -104,7 +83,6 @@ async def handle_help(message: Message) -> None:
 
 
 async def start_new_quiz(message: Message, state: FSMContext) -> None:
-    """Ініціалізує сесію та надсилає перше питання."""
     questions = prepare_quiz_session()
     now = get_current_kyiv_time()
 
@@ -130,7 +108,6 @@ async def start_new_quiz(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data.startswith("ans:"))
 async def handle_answer(callback: CallbackQuery, state: FSMContext) -> None:
-    """Обробник вибору варіанта відповіді користувачем."""
     current_state = await state.get_state()
     if current_state != QuizStates.answering.state:
         await callback.answer("⚠️ Цей тест уже неактивний. Натисніть /start для нового проходження.", show_alert=True)
@@ -144,7 +121,6 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext) -> None:
         await callback.answer()
         return
 
-    # Отримуємо вибраний індекс
     try:
         selected_idx = int(callback.data.split(":")[1])
     except (IndexError, ValueError):
@@ -156,7 +132,6 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext) -> None:
     correct_option = current_q["correct_answer"]
     is_correct = (selected_option == correct_option)
 
-    # Оновлення балів та історії
     score = data.get("score", 0) + (1 if is_correct else 0)
     history = data.get("history", [])
     history.append({
@@ -166,7 +141,6 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext) -> None:
         "is_correct": is_correct,
     })
 
-    # Формуємо зворотний зв'язок (feedback)
     if is_correct:
         feedback = (
             f"✅ <b>Правильно!</b>\n"
@@ -182,7 +156,6 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext) -> None:
 
     await callback.answer("Відповідь прийнято!")
 
-    # Прибираємо кнопки з попереднього повідомлення і показуємо результат
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
     except Exception:
@@ -190,7 +163,6 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext) -> None:
 
     await callback.message.answer(feedback)
 
-    # Переходимо до наступного запитання
     next_index = q_index + 1
     await state.update_data(
         current_index=next_index,
@@ -205,7 +177,6 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 async def finish_quiz(message: Message, state: FSMContext) -> None:
-    """Підраховує результати тестування, формує та надсилає фінальний звіт."""
     data = await state.get_data()
     score: int = data.get("score", 0)
     questions: List[Dict[str, Any]] = data.get("questions", [])
@@ -214,7 +185,6 @@ async def finish_quiz(message: Message, state: FSMContext) -> None:
     start_date_str: str = data.get("start_datetime_str", get_current_kyiv_time().strftime("%d.%m.%Y %H:%M:%S"))
     history: List[Dict[str, Any]] = data.get("history", [])
 
-    # Розрахунок тривалості
     elapsed_seconds = max(1, int(time.time() - start_ts))
     minutes = elapsed_seconds // 60
     seconds = elapsed_seconds % 60
@@ -223,10 +193,8 @@ async def finish_quiz(message: Message, state: FSMContext) -> None:
     else:
         duration_str = f"{seconds} с"
 
-    # Розрахунок відсотка успішності
     percentage = int((score / total_q) * 100) if total_q > 0 else 0
 
-    # Визначення текстової оцінки / статусу
     if percentage >= 90:
         badge = "🏆 Відмінно! Глибоке розуміння Python та ООП!"
     elif percentage >= 70:
@@ -236,7 +204,6 @@ async def finish_quiz(message: Message, state: FSMContext) -> None:
     else:
         badge = "📚 Потрібно підтягнути теоретичний матеріал."
 
-    # Деталізація відповідей
     details_lines = []
     for idx, item in enumerate(history, 1):
         status_icon = "✅" if item["is_correct"] else "❌"
@@ -264,6 +231,5 @@ async def finish_quiz(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "restart_quiz")
 async def handle_restart(callback: CallbackQuery, state: FSMContext) -> None:
-    """Обробник натискання кнопки 'Пройти тест ще раз'."""
     await callback.answer()
     await start_new_quiz(callback.message, state)

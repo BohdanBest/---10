@@ -1,10 +1,3 @@
-"""Головний модуль запуску Telegram-бота тестування з Python.
-
-Ініціалізує екземпляри Bot та Dispatcher, підключає маршрутизатори (роутери),
-запускає легковиковий HTTP-сервер для health-check на безкоштовному тарифі Render
-та запускає Long Polling.
-"""
-
 import asyncio
 import logging
 import os
@@ -21,7 +14,6 @@ from handlers import quiz_router
 
 
 async def health_check_handler(request: web.Request) -> web.Response:
-    """HTTP endpoint для перевірки стану бота сервісом Render."""
     return web.Response(
         text="🤖 Telegram Python Quiz Bot is running smoothly on Render!",
         content_type="text/plain",
@@ -30,7 +22,6 @@ async def health_check_handler(request: web.Request) -> web.Response:
 
 
 async def start_health_server(port: int, logger: logging.Logger) -> web.AppRunner:
-    """Запускає вбудований aiohttp вебсервер для прив'язки до порту Render."""
     app = web.Application()
     app.router.add_get("/", health_check_handler)
     app.router.add_get("/health", health_check_handler)
@@ -44,8 +35,6 @@ async def start_health_server(port: int, logger: logging.Logger) -> web.AppRunne
 
 
 async def main() -> None:
-    """Точка входу в програму."""
-    # Налаштування формату логування
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - [%(levelname)s] - %(name)s - %(message)s",
@@ -55,29 +44,22 @@ async def main() -> None:
     )
     logger = logging.getLogger(__name__)
 
-    # Перевірка наявності токена
     validate_config()
 
     logger.info("Ініціалізація Telegram-бота...")
 
-    # Ініціалізація бота з HTML розміткою за замовчуванням
     bot = Bot(
         token=BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
 
-    # Ініціалізація диспетчера зі сховищем станів у пам'яті (MemoryStorage)
     dp = Dispatcher(storage=MemoryStorage())
 
-    # Реєстрація роутера
     dp.include_router(quiz_router)
 
-    # Запуск легкого вебсервера для підтримки Free Web Service на Render
-    # Render передає номер порту через змінну середовища PORT
     port = int(os.getenv("PORT", "10000"))
     runner = await start_health_server(port, logger)
 
-    # Пропуск накопичених повідомлень, коли бот був офлайн
     await bot.delete_webhook(drop_pending_updates=True)
 
     logger.info("Бот успішно запущений і готовий до роботи (Long Polling)!")
