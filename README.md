@@ -82,20 +82,19 @@ python main.py
 
 ## 🌐 Інструкція розгортання на Render (Безкоштовно)
 
-Оскільки наш бот використовує асинхронний **Long Polling**, йому потрібен сервіс типу **Background Worker** (який працює постійно без необхідності приймати вхідні HTTP-запити):
+На Render безкоштовний тариф надається для типу **Web Service**. У нашому боті вбудовано легкий вебсервер на базі `aiohttp`, що відповідає на health-check запити Render на порту `PORT` (за замовчуванням 10000) та забезпечує стабільну роботу на безкоштовному тарифі:
 
 1. **Завантажте проєкт на GitHub**:
    ```bash
-   git init
    git add .
-   git commit -m "Initial commit for Telegram quiz bot"
+   git commit -m "feat: configure Web Service for Render free tier"
    # Створіть новий репозиторій на GitHub та виконайте:
    git branch -M main
    git remote add origin https://github.com/ВАШ_КОРИСТУВАЧ/ВАШ_РЕПОЗИТОРІЙ.git
    git push -u origin main
    ```
 2. **Зареєструйтесь / Увійдіть на [Render.com](https://render.com/)**.
-3. Натисніть **New +** у правому верхньому кутку та оберіть **Background Worker**.
+3. Натисніть **New +** у правому верхньому кутку та оберіть **Web Service**.
 4. Підключіть ваш GitHub-репозиторій.
 5. Заповніть налаштування сервісу:
    * **Name:** `telegram-python-quiz-bot` (або довільна назва);
@@ -103,11 +102,13 @@ python main.py
    * **Branch:** `main`;
    * **Runtime:** `Python 3`;
    * **Build Command:** `pip install -r requirements.txt`;
-   * **Start Command:** `python main.py`.
+   * **Start Command:** `python main.py`;
+   * **Instance Type:** оберіть **Free** ($0/month).
 6. Перейдіть у розділ **Environment Variables** (Змінні середовища):
    * Додайте змінну `BOT_TOKEN` зі значенням вашого токена від `@BotFather`.
-7. Натисніть **Create Background Worker**.
+7. Натисніть **Deploy Web Service**.
 8. Render автоматично збере та запустить бота. У вкладці **Logs** ви побачите:
+   `Вбудований вебсервер успішно запущено на порту 10000`
    `Бот успішно запущений і готовий до роботи (Long Polling)!`.
    Тепер бот працює 24/7 у хмарі!
 
