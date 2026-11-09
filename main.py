@@ -15,6 +15,7 @@ from typing import Dict, Any
 from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -43,7 +44,8 @@ async def health_check_handler(request: web.Request) -> web.Response:
 
     return web.Response(
         text=status_text,
-        content_type="text/plain; charset=utf-8",
+        content_type="text/plain",
+        charset="utf-8",
         status=200
     )
 
@@ -94,8 +96,10 @@ async def main() -> None:
     validate_config()
     logger.info("Ініціалізація Telegram-бота...")
 
+    session = AiohttpSession(timeout=60.0)
     bot = Bot(
         token=BOT_TOKEN,
+        session=session,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     dp = Dispatcher(storage=MemoryStorage())
